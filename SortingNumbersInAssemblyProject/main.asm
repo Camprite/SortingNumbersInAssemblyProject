@@ -30,7 +30,11 @@ lstrcatA PROTO :DWORD,:DWORD
 CloseHandle PROTO :DWORD  
 WriteFile PROTO :DWORD,:DWORD,:DWORD,:DWORD,:DWORD  
 ReadFile PROTO :DWORD,:DWORD,:DWORD,:DWORD,:DWORD
-
+ScanInt PROTO 
+nseed PROTO :DWORD
+nrandom PROTO :DWORD
+GetTickCount PROTO
+dwtoa PROTO :DWORD, :DWORD 
 ;------------------------------------------
 ;-------------
 _DATA SEGMENT
@@ -38,11 +42,17 @@ _DATA SEGMENT
 	hinp	DD	?
 	rangeFrom DD ?
 	rangeTo DD ?
+	range DD ?
+	randomNumber DD ?
+	numbersAmount DD ?
 	openedFileHandle DD ?
 	inputCharsReaded DD ?
+	bytesWritten DD ?
+	separator DD 3Bh
 
 
 	naglow	DB	"Autor aplikacji  Dawid Borkowski.",0,0Ah
+	testpath	DB	"C:\test.txt",0
 	ALIGN	4	; przesuniecie do adresu podzielnego na 4
 	rozmN	DD	$ - naglow	;liczba znaków w tablicy
 
@@ -76,13 +86,18 @@ _DATA SEGMENT
 	ALIGN	4
 	sizeMenuInvalidArgument	DD	$ - menuInvalidArgument ;liczba znaków w tablicy
 	
-	rangeMsg1 DB 0Dh,0Ah,"Podaj zakres od",0,0Ah
+	rangeMsg1 DB 0Dh,0Ah,"Podaj zakres od: ",0,0Ah
 	ALIGN	4
 	sizeRangeMsg1 DD	$ - rangeMsg1 ;liczba znaków w tablicy
 
-	rangeMsg2 DB 0Dh,0Ah,"Podaj zakres do",0,0Ah
+	rangeMsg2 DB 0Dh,0Ah,"Podaj zakres do: ",0,0Ah
 	ALIGN	4
 	sizeRangeMsg2 DD	$ - rangeMsg2 ;liczba znaków w tablicy
+	
+
+	rangeMsg3 DB 0Dh,0Ah,"Podaj ile liczb ma zostaæ wylosowanych oraz zapisanych: ",0,0Ah
+	ALIGN	4
+	sizeRangeMsg3 DD	$ - rangeMsg3 ;liczba znaków w tablicy
 
 
 	menuOption	DB	3 dup(?)
@@ -103,7 +118,7 @@ _DATA SEGMENT
 		
 	inputBufor	DB	10 dup(?)
 	ALIGN	4
-	sizeDirectoryNameBufor	DD	$ - directoryNameBufor 
+	sizeInputBufor DD	$ - inputBufor 
 
 
 	;---------stare;---------
@@ -158,7 +173,7 @@ ENDM
 getFileInputHandlerMACRO MACRO filenamePathBufor:REQ, openedFileHandle:REQ
 
 	;Pobanie uchwytu do pliku
-	invoke CreateFileA, OFFSET filenamePathBufor, GENERIC_READ,0,0,OPEN_EXISTING,0,0
+	invoke CreateFileA, OFFSET filenamePathBufor, GENERIC_WRITE,0,0,CREATE_ALWAYS,0,0
 	MOV openedFileHandle, EAX
 ENDM
 
@@ -168,21 +183,53 @@ printFileMACRO MACRO openedFileHandle:REQ
 
 ENDM
 
-getNumberRangeMACRO MACRO numberRange:REQ
+getNumberRangeMACRO MACRO
 
 	;Pobranie wartoœci od
 	invoke 	WriteConsoleA, hout, OFFSET rangeMsg1,sizeRangeMsg1,OFFSET rout,0
 	invoke ReadConsoleA, hinp, OFFSET bufor, rbuf, OFFSET rinp, 0
-	;scanint
+	push OFFSET bufor
+	call ScanInt
 	MOV rangeFrom, EAX
 
 	;Pobranie wartoœci do
 	invoke 	WriteConsoleA, hout, OFFSET rangeMsg2,sizeRangeMsg2,OFFSET rout,0
-	;scanint
-	MOV rangeTo, EAX
 	invoke ReadConsoleA, hinp, OFFSET bufor, rbuf, OFFSET rinp, 0
+	push OFFSET bufor
+	call ScanInt
+	MOV rangeTo, EAX
 
+	;Pobranie wartoœci ile
+	invoke 	WriteConsoleA, hout, OFFSET rangeMsg3,sizeRangeMsg3,OFFSET rout,0
+	invoke ReadConsoleA, hinp, OFFSET bufor, rbuf, OFFSET rinp, 0
+	push OFFSET bufor
+	call ScanInt
+	MOV numbersAmount, EAX
+ENDM
 
+saveRandomNumbersInFile MACRO
+	invoke GetTickCount ;zwraca w czas w milisekundach od ostatniego uruchomienia systemu
+	invoke nseed,EAX; ustawienie wartoœci inicuj¹cej generator liczb pseudolosowych
+	
+	MOV EAX, rangeTo
+	SUB EAX, rangeFrom
+	MOV range, EAX
+
+	MOV ECX, numbersAmount
+
+	;saveNumber:
+	
+	invoke nrandom,range ;zwraca w eax liczbê z zakresu 0-zakres
+	ADD EAX, rangefrom ;Dodanie przesuniecia od zera
+	;mov randomNumber,EAX
+
+	invoke dwtoa, EAX, OFFSET  bufor;
+	 
+	invoke WriteFile, openedFileHandle, OFFSET bufor, EAX, bytesWritten,0
+	invoke WriteFile, openedFileHandle, OFFSET separator, 2, bytesWritten,0
+
+	;loop saveNumber
+	invoke CloseHandle, openedFileHandle
 ENDM
 
 main proc
@@ -200,6 +247,7 @@ charToOemMACRO menuMsg5
 charToOemMACRO menuInvalidArgument
 charToOemMACRO rangeMsg1
 charToOemMACRO rangeMsg2
+charToOemMACRO rangeMsg3
 ;------ wyœwietlenie autora ---------
     invoke 	WriteConsoleA, hout, OFFSET naglow,rozmN,OFFSET rout,0 
 
@@ -231,6 +279,7 @@ menuLoop:
 		JMP menuLoop
 	.ENDIF
 
+	;--------------------------------------------WYPISYWANIE CASE--------------------------------------------
 	wypiszPlik:
 
 	;Pobranie nazwy pliku
@@ -239,25 +288,35 @@ menuLoop:
 	;Pobranie uchwytu do pliku
 	getFileInputHandlerMACRO filenamePathBufor, openedFileHandle
 
+
 	;Wypisanie pliku
 	;printFileMACRO openedFileHandle
 	
 	invoke CloseHandle, openedFileHandle
 	JMP menuLoop
+
+	;--------------------------------------------LOSOWANIE CASE--------------------------------------------
 	losujLiczby:		
-	getFilenamePathMACRO	 directoryNameBufor, filenameBufor, filenamePathBufor,sizeFilenameBufor,sizeDirectoryNameBufor
 
 	;Pobranie nazwy pliku
 	getFilenamePathMACRO	 directoryNameBufor, filenameBufor, filenamePathBufor,sizeFilenameBufor,sizeDirectoryNameBufor
 	
 	;Pobranie uchwytu do pliku
 	getFileInputHandlerMACRO filenamePathBufor, openedFileHandle
-
+	
+	invoke CreateFileA, OFFSET testpath, GENERIC_WRITE,0,0,CREATE_ALWAYS,0,0
+	MOV openedFileHandle, EAX
+	invoke WriteFile, openedFileHandle, OFFSET separator, 2, bytesWritten,0
 	;Pobranie zakresu do losowania
-	getNumberRangeMACRO numberRange
+
+	;getNumberRangeMACRO
+
+	;saveRandomNumbersInFile
 
 	invoke CloseHandle, openedFileHandle
 	JMP menuLoop
+
+	;--------------------------------------------SORTOWANIE CASE--------------------------------------------
 	sortujLiczby:
 	getFilenamePathMACRO	 directoryNameBufor, filenameBufor, filenamePathBufor,sizeFilenameBufor,sizeDirectoryNameBufor
 
@@ -273,10 +332,6 @@ menuLoop:
 	invoke ExitProcess, 0	; wywo³anie funkcji ExitProcess
 	
 	main ENDP
-
-	printFile PROC  C :DWORD, :DWORD
-
-	printFile ENDp
 _TEXT	ENDS    
 END main
 
