@@ -4,7 +4,7 @@
 
 .386
 .MODEL flat, STDCALL
-;OPTION LJMP ;Obs³uga d³u¿szych skoków
+OPTION LJMP ;Obs³uga d³u¿szych skoków
 
 ;--- stale ---
 STD_INPUT_HANDLE                     equ -10
@@ -48,11 +48,11 @@ _DATA SEGMENT
 	openedFileHandle DD ?
 	inputCharsReaded DD ?
 	bytesWritten DD ?
+	bytesToWrite DB ?
 	separator DD 3Bh
 
 
 	naglow	DB	"Autor aplikacji  Dawid Borkowski.",0,0Ah
-	testpath	DB	"C:\test.txt",0
 	ALIGN	4	; przesuniecie do adresu podzielnego na 4
 	rozmN	DD	$ - naglow	;liczba znaków w tablicy
 
@@ -104,15 +104,15 @@ _DATA SEGMENT
 	ALIGN	4
 	sizeMenuOption	DD	$ - menuOption
 
-	filenamePathBufor	DB	128 dup(?)
+	filenamePathBufor	DB	128 dup(0)
 	ALIGN	4
 	sizeFilenamePathBufor	DD	$ - filenamePathBufor 
 
-	filenameBufor	DB	128 dup(?)
+	filenameBufor	DB	128 dup(0)
 	ALIGN	4
 	sizeFilenameBufor	DD	$ - filenameBufor 
 	
-	directoryNameBufor	DB	256 dup(?)
+	directoryNameBufor	DB	256 dup(0)
 	ALIGN	4
 	sizeDirectoryNameBufor	DD	$ - directoryNameBufor 
 		
@@ -143,8 +143,14 @@ charToOemMACRO MACRO offset1:REQ
 ENDM
 
 getFilenameMACRO MACRO FilenameBufor:REQ, sizeFilenameBufor:REQ
-    invoke 	WriteConsoleA, hout, OFFSET getFilenameMsg,sizeFilenameMsg,OFFSET rout,0
-	invoke ReadConsoleA, hinp, OFFSET FilenameBufor, sizeFilenameBufor, OFFSET rinp,0	; wywo³anie funkcji ReadConsoleA
+    invoke 	WriteConsoleA, hout, OFFSET getFilenameMsg, sizeFilenameMsg,OFFSET rout,0
+	invoke ReadConsoleA, hinp, OFFSET filenameBufor, sizeFilenameBufor, OFFSET rinp,0	; wywo³anie funkcji ReadConsoleA
+	mov EAX, rinp
+	DEC EAX
+	MOV BYTE PTR[filenameBufor+EAX],0
+	DEC EAX
+	MOV BYTE PTR[filenameBufor+EAX],0
+	
 ENDM
 
 getGetCurrentDirectoryMACRO MACRO directoryNameBufor:REQ, sizeDirectoryNameBufor:REQ
@@ -177,9 +183,39 @@ getFileInputHandlerMACRO MACRO filenamePathBufor:REQ, openedFileHandle:REQ
 	MOV openedFileHandle, EAX
 ENDM
 
-printFileMACRO MACRO openedFileHandle:REQ
+getFileInputHandlerReadMACRO MACRO filenamePathBufor:REQ, openedFileHandle:REQ
 
-	invoke ReadFile, openedFileHandle, inputBufor, 1, inputCharsReaded, 0
+	;Pobanie uchwytu do pliku
+	invoke CreateFileA, OFFSET filenamePathBufor, GENERIC_READ,0,0,OPEN_EXISTING,0,0
+	;TO DO SPRAWDZANIE CZY PLIK SIE POPRAWNIE OTWORZYL
+	MOV openedFileHandle, EAX
+ENDM
+
+printFileMACRO MACRO
+	;Wczytanie nazwy pliku
+	getFilenamePathMACRO	 directoryNameBufor, filenameBufor, filenamePathBufor,sizeFilenameBufor,sizeDirectoryNameBufor
+	
+
+	;otwarcie pliku
+	getFileInputHandlerReadMACRO filenamePathBufor, openedFileHandle
+
+	MOV EBX, OFFSET inputbufor
+	wczytaj:
+	
+	invoke ReadFile, openedFileHandle, EBX , 1, inputCharsReaded, 0
+	INC EAX
+	.IF BYTE PTR [EBX] == 52
+		MOV EBX, OFFSET inputbufor
+		invoke 	WriteConsoleA, hout, OFFSET inputbufor,EAX,OFFSET rout,0
+
+	.ELSEIF BYTE PTR [EBX] == 00
+		jmp koniec 
+	.ELSE
+	loop wczytaj
+	.ENDIF
+	
+	koniec:
+
 
 ENDM
 
@@ -208,7 +244,7 @@ getNumberRangeMACRO MACRO
 ENDM
 
 saveRandomNumbersInFile MACRO
-	invoke GetTickCount ;zwraca w czas w milisekundach od ostatniego uruchomienia systemu
+invoke GetTickCount ;zwraca w czas w milisekundach od ostatniego uruchomienia systemu
 	invoke nseed,EAX; ustawienie wartoœci inicuj¹cej generator liczb pseudolosowych
 	
 	MOV EAX, rangeTo
@@ -217,19 +253,29 @@ saveRandomNumbersInFile MACRO
 
 	MOV ECX, numbersAmount
 
-	;saveNumber:
+	saveNumber:
 	
 	invoke nrandom,range ;zwraca w eax liczbê z zakresu 0-zakres
 	ADD EAX, rangefrom ;Dodanie przesuniecia od zera
-	;mov randomNumber,EAX
+	MOV randomNumber,EAX
 
-	invoke dwtoa, EAX, OFFSET  bufor;
+	invoke dwtoa,randomNumber, OFFSET  bufor
+
+	invoke lstrlenA, OFFSET  bufor;
 	 
 	invoke WriteFile, openedFileHandle, OFFSET bufor, EAX, bytesWritten,0
-	invoke WriteFile, openedFileHandle, OFFSET separator, 2, bytesWritten,0
+	invoke WriteFile, openedFileHandle, OFFSET separator, 1, bytesWritten,0
 
-	;loop saveNumber
+	DEC numbersAmount
+	MOV ECX, numbersAmount
+	loop saveNumber
+	
+;save macro to delete end
+
+
+
 	invoke CloseHandle, openedFileHandle
+	invoke ExitProcess, 0
 ENDM
 
 main proc
@@ -283,14 +329,56 @@ menuLoop:
 	wypiszPlik:
 
 	;Pobranie nazwy pliku
-	getFilenamePathMACRO	 directoryNameBufor, filenameBufor, filenamePathBufor,sizeFilenameBufor,sizeDirectoryNameBufor
+	;getFilenamePathMACRO	 directoryNameBufor, filenameBufor, filenamePathBufor,sizeFilenameBufor,sizeDirectoryNameBufor
 	
 	;Pobranie uchwytu do pliku
-	getFileInputHandlerMACRO filenamePathBufor, openedFileHandle
+	;getFileInputHandlerMACRO filenamePathBufor, openedFileHandle
 
 
 	;Wypisanie pliku
-	;printFileMACRO openedFileHandle
+	;printFileMACRO
+
+	;delete
+	;FileMACRO MACRO
+	;Wczytanie nazwy pliku
+	getFilenamePathMACRO	 directoryNameBufor, filenameBufor, filenamePathBufor,sizeFilenameBufor,sizeDirectoryNameBufor
+	
+
+	;otwarcie pliku
+	getFileInputHandlerReadMACRO filenamePathBufor, openedFileHandle
+
+
+	MOV EBX, OFFSET inputBufor
+	MOV bytesToWrite, 1
+	wczytaj:
+	invoke ReadFile, openedFileHandle, EBX , 1, OFFSET  inputCharsReaded, 0
+	.IF BYTE PTR [EBX] == 59
+		MOV EBX, OFFSET inputBufor
+		DEC EBX
+		dec bytesToWrite
+		invoke 	WriteConsoleA, hout, OFFSET inputBufor,bytesToWrite,OFFSET rout,0
+		invoke WriteConsoleA, hout, OFFSET separator, 1,OFFSET bytesWritten,0
+		MOV bytesToWrite, 0
+		MOV EAX, 1
+	.ENDIF
+
+	INC ECX
+	INC bytesToWrite
+	INC EBX
+	
+	.IF inputCharsReaded == 0
+	MOV ECX, 0
+	.ENDIF
+	
+	.IF ECX > 0
+	DEC ECX
+	JMP wczytaj
+	.ENDIF
+
+
+
+	;delete
+
 	
 	invoke CloseHandle, openedFileHandle
 	JMP menuLoop
@@ -304,16 +392,18 @@ menuLoop:
 	;Pobranie uchwytu do pliku
 	getFileInputHandlerMACRO filenamePathBufor, openedFileHandle
 	
-	invoke CreateFileA, OFFSET testpath, GENERIC_WRITE,0,0,CREATE_ALWAYS,0,0
-	MOV openedFileHandle, EAX
-	invoke WriteFile, openedFileHandle, OFFSET separator, 2, bytesWritten,0
+	;MOV EAX, 0
+	;invoke CreateFileA, OFFSET filenamePathBufor, GENERIC_WRITE,0,0,CREATE_ALWAYS,0,0
+	;MOV openedFileHandle, EAX
+	;invoke WriteFile, openedFileHandle, OFFSET separator, 2, bytesWritten,0
 	;Pobranie zakresu do losowania
 
-	;getNumberRangeMACRO
+	getNumberRangeMACRO
 
-	;saveRandomNumbersInFile
+	saveRandomNumbersInFile
 
-	invoke CloseHandle, openedFileHandle
+;save macro to delete
+
 	JMP menuLoop
 
 	;--------------------------------------------SORTOWANIE CASE--------------------------------------------
