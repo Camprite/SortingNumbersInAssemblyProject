@@ -15,6 +15,9 @@ CREATE_NEW                           equ 1
 CREATE_ALWAYS                        equ 2
 OPEN_EXISTING                        equ 3
 OPEN_ALWAYS                          equ 4
+FILE_BEGIN							 equ 0h ;MoveMethod dla SetFilePointe
+FILE_CURRENT                         equ 1h ;MoveMethod dla SetFilePointe
+FILE_END                             equ 2h ;MoveMethod dla SetFilePointe
 ;--- prototypy ---
 CharToOemA PROTO :DWORD,:DWORD
 GetStdHandle PROTO :DWORD
@@ -22,6 +25,7 @@ ReadConsoleA PROTO :DWORD,:DWORD,:DWORD,:DWORD,:DWORD
 WriteConsoleA PROTO :DWORD,:DWORD,:DWORD,:DWORD,:DWORD
 CreateFileA PROTO :DWORD,:DWORD,:DWORD,:DWORD,:DWORD,:DWORD,:DWORD 
 GetCurrentDirectoryA PROTO :DWORD,:DWORD  
+SetFilePointer PROTO :DWORD,:DWORD,:DWORD,:DWORD  
 ExitProcess PROTO :DWORD
 wsprintfA PROTO C :VARARG
 lstrlenA PROTO :DWORD
@@ -38,23 +42,40 @@ dwtoa PROTO :DWORD, :DWORD
 ;------------------------------------------
 ;-------------
 _DATA SEGMENT
+	adresBufora	DD	?
 	hout	DD	?
 	hinp	DD	?
 	rangeFrom DD ?
 	rangeTo DD ?
 	range DD ?
 	randomNumber DD ?
+	liczba1 DD ?
+	liczba2 DD ?
+	distance DD 0
+	distanceMin DD 0
+	distancePierwsza DD 0
+	distanceDruga DD 0
+	min DD ?
 	numbersAmount DD ?
 	openedFileHandle DD ?
+	tempFileHandle DD ?
+	scanedChars DD ?
+	scanedCharsMin DD ?
 	inputCharsReaded DD ?
 	bytesWritten DD ?
 	bytesToWrite DB ?
 	separator DD 3Bh
-
+	odwiedzone DD 127
+	buforPierwszy	DB	8 dup(?)
+	buforDrugi	DB	8 dup(?)
 
 	naglow	DB	"Autor aplikacji  Dawid Borkowski.",0,0Ah
 	ALIGN	4	; przesuniecie do adresu podzielnego na 4
 	rozmN	DD	$ - naglow	;liczba znaków w tablicy
+
+	tempFile	DB	"temporary.txt",0,0
+	ALIGN	4	; przesuniecie do adresu podzielnego na 4
+	rozmTempFile	DD	$ - tempFile	;liczba znaków w tablicy
 
 
 	getFilenameMsg DB 0Dh,0Ah,"Podaj nazwe pliku: ",0
@@ -114,7 +135,11 @@ _DATA SEGMENT
 	
 	directoryNameBufor	DB	256 dup(0)
 	ALIGN	4
-	sizeDirectoryNameBufor	DD	$ - directoryNameBufor 
+	sizeDirectoryNameBufor	DD	$ - directoryNameBufor 	
+
+	tempFileNameBufor	DB	256 dup(0)
+	ALIGN	4
+	sizeTempFileNameBufor	DD	$ - tempFileNameBufor 
 		
 	inputBufor	DB	10 dup(?)
 	ALIGN	4
@@ -176,47 +201,66 @@ getFilenamePathMACRO MACRO directoryNameBufor:REQ, filenameBufor:REQ, filenamePa
 
 ENDM
 
+	getTempFileMACRO MACRO
+	;Makro pobieraj¹ce nazwe bierz¹cego katalogu
+	getGetCurrentDirectoryMACRO		directoryNameBufor, sizeDirectoryNameBufor 
+	
+	;Kopiowanie do bufora docelowego scie¿ki katalogu
+	invoke lstrcpyA, OFFSET tempFileNameBufor, OFFSET directoryNameBufor
+	
+	;Konkatenacja z nazw¹ pliku do otworzenia
+	invoke lstrcatA, OFFSET tempFileNameBufor , OFFSET tempFile
+
+ENDM
+
 getFileInputHandlerMACRO MACRO filenamePathBufor:REQ, openedFileHandle:REQ
 
 	;Pobanie uchwytu do pliku
 	invoke CreateFileA, OFFSET filenamePathBufor, GENERIC_WRITE,0,0,CREATE_ALWAYS,0,0
 	MOV openedFileHandle, EAX
 ENDM
-
+;wyrzuc niepotrzebne otwierania
 getFileInputHandlerReadMACRO MACRO filenamePathBufor:REQ, openedFileHandle:REQ
 
 	;Pobanie uchwytu do pliku
-	invoke CreateFileA, OFFSET filenamePathBufor, GENERIC_READ,0,0,OPEN_EXISTING,0,0
+	invoke CreateFileA, OFFSET filenamePathBufor, GENERIC_READ OR GENERIC_WRITE,0,0,OPEN_EXISTING,0,0
 	;TO DO SPRAWDZANIE CZY PLIK SIE POPRAWNIE OTWORZYL
 	MOV openedFileHandle, EAX
 ENDM
 
 printFileMACRO MACRO
-	;Wczytanie nazwy pliku
+		;Wczytanie nazwy pliku
 	getFilenamePathMACRO	 directoryNameBufor, filenameBufor, filenamePathBufor,sizeFilenameBufor,sizeDirectoryNameBufor
-	
 
-	;otwarcie pliku
+	;Otwarcie pliku
 	getFileInputHandlerReadMACRO filenamePathBufor, openedFileHandle
 
-	MOV EBX, OFFSET inputbufor
+	MOV EBX, OFFSET inputBufor
+	MOV bytesToWrite, 1
 	wczytaj:
-	
-	invoke ReadFile, openedFileHandle, EBX , 1, inputCharsReaded, 0
-	INC EAX
-	.IF BYTE PTR [EBX] == 52
-		MOV EBX, OFFSET inputbufor
-		invoke 	WriteConsoleA, hout, OFFSET inputbufor,EAX,OFFSET rout,0
+	invoke ReadFile, openedFileHandle, EBX , 1, OFFSET  inputCharsReaded, 0
+	.IF BYTE PTR [EBX] == 59
+		MOV EBX, OFFSET inputBufor
+		DEC EBX
+		dec bytesToWrite
+		invoke 	WriteConsoleA, hout, OFFSET inputBufor,bytesToWrite,OFFSET rout,0
+		invoke WriteConsoleA, hout, OFFSET separator, 1,OFFSET bytesWritten,0
+		MOV bytesToWrite, 0
+		MOV EAX, 1
+	.ENDIF
 
-	.ELSEIF BYTE PTR [EBX] == 00
-		jmp koniec 
-	.ELSE
-	loop wczytaj
+	INC ECX
+	INC bytesToWrite
+	INC EBX
+	
+	.IF inputCharsReaded == 0
+		MOV ECX, 0
 	.ENDIF
 	
-	koniec:
-
-
+	.IF ECX > 0
+		DEC ECX
+		JMP wczytaj
+	.ENDIF
 ENDM
 
 getNumberRangeMACRO MACRO
@@ -275,13 +319,14 @@ invoke GetTickCount ;zwraca w czas w milisekundach od ostatniego uruchomienia sy
 
 
 	invoke CloseHandle, openedFileHandle
-	invoke ExitProcess, 0
 ENDM
 
 main proc
 ;--- pobranie uchwytów do wyj i wej
 	ReturnDescryptor STD_OUTPUT_HANDLE, hout ;przyk³ad u¿ycia makra
 	ReturnDescryptor STD_INPUT_HANDLE, hinp ;przyk³ad u¿ycia tego samego makra z innymi parametrami
+
+
 ;--------- konwersja znaków wiadomoœci na polskie znaki ---------
 charToOemMACRO naglow 
 charToOemMACRO getFilenameMsg 
@@ -328,56 +373,10 @@ menuLoop:
 	;--------------------------------------------WYPISYWANIE CASE--------------------------------------------
 	wypiszPlik:
 
-	;Pobranie nazwy pliku
-	;getFilenamePathMACRO	 directoryNameBufor, filenameBufor, filenamePathBufor,sizeFilenameBufor,sizeDirectoryNameBufor
-	
-	;Pobranie uchwytu do pliku
-	;getFileInputHandlerMACRO filenamePathBufor, openedFileHandle
-
-
 	;Wypisanie pliku
-	;printFileMACRO
-
-	;delete
-	;FileMACRO MACRO
-	;Wczytanie nazwy pliku
-	getFilenamePathMACRO	 directoryNameBufor, filenameBufor, filenamePathBufor,sizeFilenameBufor,sizeDirectoryNameBufor
-	
-
-	;otwarcie pliku
-	getFileInputHandlerReadMACRO filenamePathBufor, openedFileHandle
+	printFileMACRO
 
 
-	MOV EBX, OFFSET inputBufor
-	MOV bytesToWrite, 1
-	wczytaj:
-	invoke ReadFile, openedFileHandle, EBX , 1, OFFSET  inputCharsReaded, 0
-	.IF BYTE PTR [EBX] == 59
-		MOV EBX, OFFSET inputBufor
-		DEC EBX
-		dec bytesToWrite
-		invoke 	WriteConsoleA, hout, OFFSET inputBufor,bytesToWrite,OFFSET rout,0
-		invoke WriteConsoleA, hout, OFFSET separator, 1,OFFSET bytesWritten,0
-		MOV bytesToWrite, 0
-		MOV EAX, 1
-	.ENDIF
-
-	INC ECX
-	INC bytesToWrite
-	INC EBX
-	
-	.IF inputCharsReaded == 0
-	MOV ECX, 0
-	.ENDIF
-	
-	.IF ECX > 0
-	DEC ECX
-	JMP wczytaj
-	.ENDIF
-
-
-
-	;delete
 
 	
 	invoke CloseHandle, openedFileHandle
@@ -392,24 +391,108 @@ menuLoop:
 	;Pobranie uchwytu do pliku
 	getFileInputHandlerMACRO filenamePathBufor, openedFileHandle
 	
-	;MOV EAX, 0
-	;invoke CreateFileA, OFFSET filenamePathBufor, GENERIC_WRITE,0,0,CREATE_ALWAYS,0,0
-	;MOV openedFileHandle, EAX
-	;invoke WriteFile, openedFileHandle, OFFSET separator, 2, bytesWritten,0
 	;Pobranie zakresu do losowania
-
 	getNumberRangeMACRO
-
+	
+	;Losowanie i zapis do pliku
 	saveRandomNumbersInFile
-
-;save macro to delete
 
 	JMP menuLoop
 
 	;--------------------------------------------SORTOWANIE CASE--------------------------------------------
 	sortujLiczby:
-	getFilenamePathMACRO	 directoryNameBufor, filenameBufor, filenamePathBufor,sizeFilenameBufor,sizeDirectoryNameBufor
 
+	getTempFileMACRO
+	;Pobanie uchwytu do pliku tymczasowego
+	
+	invoke CreateFileA, OFFSET tempFileNameBufor, GENERIC_WRITE,0,0,CREATE_ALWAYS,0,0
+	MOV tempFileHandle, EAX
+
+	;Pobranie nazwy pliku
+	getFilenamePathMACRO	 directoryNameBufor, filenameBufor, filenamePathBufor,sizeFilenameBufor,sizeDirectoryNameBufor
+	
+	;Pobranie uchwytu do pliku
+	getFileInputHandlerReadMACRO filenamePathBufor, openedFileHandle
+	
+
+
+	znajdzNajmniejsza:
+		mov distance, 0
+		mov min, 99999999
+		MOV EBX, OFFSET buforPierwszy
+		mov scanedChars, 00
+	wczytajZnak:
+		
+		invoke ReadFile, openedFileHandle, EBX , 1, OFFSET  inputCharsReaded, 0
+		INC scanedChars
+		INC distance
+
+	
+		.IF BYTE PTR [EBX] == 59
+			;kasowanie œrednika z bufora
+			MOV BYTE PTR [EBX], 00
+			MOV EBX, OFFSET buforPierwszy
+			DEC EBX
+		
+
+			;konwersja bufora na cyfre
+			push OFFSET buforPierwszy
+			.IF scanedChars > 2
+			call ScanInt
+			MOV liczba1, EAX
+				;zerowanie bufora
+				mov ECX,8
+				zerowanie:
+				MOV BYTE PTR[OFFSET buforPierwszy + ECX],0
+				loop zerowanie
+
+
+			.IF min > EAX
+			MOV min, EAX
+			MOV EAX, distance
+			SUB EAX, scanedChars
+			MOV distanceMin, EAX
+
+			MOV EAX, scanedChars
+			MOV scanedCharsMin, EAX
+
+			.ENDIF
+			.ENDIF
+			mov scanedChars, 00
+		.ENDIF
+
+		INC EBX
+	
+		.IF inputCharsReaded == 0
+			jmp koniecPliku
+			MOV ECX, 0
+		.ENDIF
+		
+		jmp wczytajZnak
+
+	koniecPliku:
+	.IF min ==  99999999
+		jmp wyjdzStont
+	.ENDIF
+
+	invoke SetFilePointer, openedFileHandle, distanceMin, 0, FILE_BEGIN
+
+	invoke ReadFile, openedFileHandle, OFFSET buforPierwszy , scanedCharsMin , OFFSET  inputCharsReaded, 0
+
+	invoke WriteFile, tempFileHandle, OFFSET buforPierwszy, scanedCharsMin , OFFSET bytesWritten,0
+
+	invoke SetFilePointer, openedFileHandle, distanceMin, 0, FILE_BEGIN
+
+	wypelnijSeparatorem:
+	invoke WriteFile, openedFileHandle, offset separator, 1,OFFSET bytesWritten,0
+	CMP scanedCharsMin, 0
+	DEC scanedCharsMin
+	JNE wypelnijSeparatorem
+
+	invoke SetFilePointer, openedFileHandle, 0, 0, FILE_BEGIN
+	JMP znajdzNajmniejsza
+
+	wyjdzStont:
 	invoke CloseHandle, openedFileHandle
 	JMP menuLoop
 
