@@ -1,10 +1,10 @@
-;Aplikacja korzystajπca z otwartego okna konsoli
-;Aplikacja majπca na celu zapisywanie liczb do pliku, odczytywanie odraz sortowanie
-;PrzyjÍty algorytm sortowania: Bubble sort
+;Aplikacja korzystajƒÖca z otwartego okna konsoli
+;Aplikacja majƒÖca na celu zapisywanie liczb do pliku, odczytywanie odraz sortowanie
+;Przyjƒôty algorytm sortowania: Bubble sort
 
 .386
 .MODEL flat, STDCALL
-OPTION LJMP ;Obs≥uga d≥uøszych skokÛw
+OPTION LJMP ;Obs≈Çuga d≈Çu≈ºszych skok√≥w
 
 ;--- stale ---
 STD_INPUT_HANDLE                     equ -10
@@ -62,7 +62,7 @@ _DATA SEGMENT
 	tempFileHandle DD ?
 	scanedChars DD 8 dup(?)
 	scanedCharsMin DD 8 dup(?)
-	inputCharsReaded DD 8 dup(?)
+	inputCharsReaded DD ?
 	bytesWritten DD ?
 	bytesToWrite DB ?
 	separator DD 3Bh
@@ -73,54 +73,54 @@ _DATA SEGMENT
 
 	naglow	DB	"Autor aplikacji  Dawid Borkowski.",0,0Ah
 	ALIGN	4	; przesuniecie do adresu podzielnego na 4
-	rozmN	DD	$ - naglow	;liczba znakÛw w tablicy
+	rozmN	DD	$ - naglow	;liczba znak√≥w w tablicy
 
 	tempFile	DB	"temporary.txt",0,0
 	ALIGN	4	; przesuniecie do adresu podzielnego na 4
-	rozmTempFile	DD	$ - tempFile	;liczba znakÛw w tablicy
+	rozmTempFile	DD	$ - tempFile	;liczba znak√≥w w tablicy
 
 
 	getFilenameMsg DB 0Dh,0Ah,"Podaj nazwe pliku: ",0
 	ALIGN	4
-	sizeFilenameMsg	DD	$ - getFilenameMsg ;liczba znakÛw w tablicy
+	sizeFilenameMsg	DD	$ - getFilenameMsg ;liczba znak√≥w w tablicy
 
 	;	---		Opcje menu		---
 	menuMsg1 DB 0Dh,0Ah,"Wybierz opcje: ",0
 	ALIGN	4
-	sizeMsg1	DD	$ - menuMsg1 ;liczba znakÛw w tablicy
+	sizeMsg1	DD	$ - menuMsg1 ;liczba znak√≥w w tablicy
 
 	menuMsg2 DB 0Dh,0Ah,"1. Losuj liczby i wpisz do pliku. ",0
 	ALIGN	4
-	sizeMsg2	DD	$ - menuMsg2 ;liczba znakÛw w tablicy
+	sizeMsg2	DD	$ - menuMsg2 ;liczba znak√≥w w tablicy
 	
 	menuMsg3 DB 0Dh,0Ah,"2. Sortuj liczby.",0
 	ALIGN	4
-	sizeMsg3	DD	$ - menuMsg3 ;liczba znakÛw w tablicy
+	sizeMsg3	DD	$ - menuMsg3 ;liczba znak√≥w w tablicy
 	
 	menuMsg4 DB 0Dh,0Ah,"3. Wypisz liczby z pliku. ",0
 	ALIGN	4
-	sizeMsg4	DD	$ - menuMsg4 ;liczba znakÛw w tablicy	
+	sizeMsg4	DD	$ - menuMsg4 ;liczba znak√≥w w tablicy	
 
-	menuMsg5 DB 0Dh,0Ah,"4. ZakoÒcz program. ",0,0Ah
+	menuMsg5 DB 0Dh,0Ah,"4. Zako≈Ñcz program. ",0,0Ah
 	ALIGN	4
-	sizeMsg5	DD	$ - menuMsg5 ;liczba znakÛw w tablicy
+	sizeMsg5	DD	$ - menuMsg5 ;liczba znak√≥w w tablicy
 
-	menuInvalidArgument DB 0Dh,0Ah,"Nie rozpoznano argumentu, sprÛbuj ponownie.",0,0Ah
+	menuInvalidArgument DB 0Dh,0Ah,"Nie rozpoznano argumentu, spr√≥buj ponownie.",0,0Ah
 	ALIGN	4
-	sizeMenuInvalidArgument	DD	$ - menuInvalidArgument ;liczba znakÛw w tablicy
+	sizeMenuInvalidArgument	DD	$ - menuInvalidArgument ;liczba znak√≥w w tablicy
 	
 	rangeMsg1 DB 0Dh,0Ah,"Podaj zakres od: ",0,0Ah
 	ALIGN	4
-	sizeRangeMsg1 DD	$ - rangeMsg1 ;liczba znakÛw w tablicy
+	sizeRangeMsg1 DD	$ - rangeMsg1 ;liczba znak√≥w w tablicy
 
 	rangeMsg2 DB 0Dh,0Ah,"Podaj zakres do: ",0,0Ah
 	ALIGN	4
-	sizeRangeMsg2 DD	$ - rangeMsg2 ;liczba znakÛw w tablicy
+	sizeRangeMsg2 DD	$ - rangeMsg2 ;liczba znak√≥w w tablicy
 	
 
-	rangeMsg3 DB 0Dh,0Ah,"Podaj ile liczb ma zostaÊ wylosowanych oraz zapisanych: ",0,0Ah
+	rangeMsg3 DB 0Dh,0Ah,"Podaj ile liczb ma zostaƒá wylosowanych oraz zapisanych: ",0,0Ah
 	ALIGN	4
-	sizeRangeMsg3 DD	$ - rangeMsg3 ;liczba znakÛw w tablicy
+	sizeRangeMsg3 DD	$ - rangeMsg3 ;liczba znak√≥w w tablicy
 
 
 	menuOption	DB	3 dup(?)
@@ -149,8 +149,8 @@ _DATA SEGMENT
 
 
 	;---------stare;---------
-	rout	DD	0 ;faktyczna liczba wyprowadzonych znakÛw
-	rinp	DD	0 ;faktyczna liczba wprowadzonych znakÛw
+	rout	DD	0 ;faktyczna liczba wyprowadzonych znak√≥w
+	rinp	DD	0 ;faktyczna liczba wprowadzonych znak√≥w
 	bufor	DB	128 dup(?)
 	rbuf	DD	128
 _DATA ENDS
@@ -171,7 +171,7 @@ ENDM
 
 getFilenameMACRO MACRO FilenameBufor:REQ, sizeFilenameBufor:REQ
     invoke 	WriteConsoleA, hout, OFFSET getFilenameMsg, sizeFilenameMsg,OFFSET rout,0
-	invoke ReadConsoleA, hinp, OFFSET filenameBufor, sizeFilenameBufor, OFFSET rinp,0	; wywo≥anie funkcji ReadConsoleA
+	invoke ReadConsoleA, hinp, OFFSET filenameBufor, sizeFilenameBufor, OFFSET rinp,0	; wywo≈Çanie funkcji ReadConsoleA
 	mov EAX, rinp
 	DEC EAX
 	MOV BYTE PTR[filenameBufor+EAX],0
@@ -182,33 +182,35 @@ ENDM
 
 getGetCurrentDirectoryMACRO MACRO directoryNameBufor:REQ, sizeDirectoryNameBufor:REQ
 	invoke GetCurrentDirectoryA,  sizeDirectoryNameBufor, OFFSET directoryNameBufor
-	;---------  Dodanie ukoúnika na koniec (5C znak ukoúnika w hexie)
+	;---------  Dodanie uko≈õnika na koniec (5C znak uko≈õnika w hexie)
 	invoke lstrlenA, OFFSET directoryNameBufor
 	MOV BYTE PTR[OFFSET directoryNameBufor + EAX],5Ch
 ENDM
 
-getFilenamePathMACRO MACRO 	;Makro pobierajπce nazwe pliku do wczytania
+getFilenamePathMACRO MACRO directoryNameBufor:REQ, filenameBufor:REQ, filenamePathBufor:REQ, sizeFilenameBuforREQ, sizeDirectoryNameBufor:REQ
+	;Makro pobierajƒÖce nazwe pliku do wczytania
 	getFilenameMACRO	filenameBufor, sizeFilenameBufor 
 	
-	;Makro pobierajπce nazwe bierzπcego katalogu
-
+	;Makro pobierajƒÖce nazwe bierzƒÖcego katalogu
+	getGetCurrentDirectoryMACRO		directoryNameBufor, sizeDirectoryNameBufor 
 	
-	;Kopiowanie do bufora docelowego scieøki katalogu
+	;Kopiowanie do bufora docelowego scie≈ºki katalogu
 	invoke lstrcpyA, OFFSET filenamePathBufor, OFFSET directoryNameBufor
 	invoke lstrlenA, OFFSET directoryNameBufor
 	
-	;Konkatenacja z nazwπ pliku do otworzenia
+	;Konkatenacja z nazwƒÖ pliku do otworzenia
 	invoke lstrcatA, OFFSET filenamePathBufor , OFFSET filenameBufor
 
 ENDM
 
 	getTempFileMACRO MACRO
-	;Makro pobierajπce nazwe bierzπcego katalogu
+	;Makro pobierajƒÖce nazwe bierzƒÖcego katalogu
+	getGetCurrentDirectoryMACRO		directoryNameBufor, sizeDirectoryNameBufor 
 	
-	;Kopiowanie do bufora docelowego scieøki katalogu
+	;Kopiowanie do bufora docelowego scie≈ºki katalogu
 	invoke lstrcpyA, OFFSET tempFileNameBufor, OFFSET directoryNameBufor
 	
-	;Konkatenacja z nazwπ pliku do otworzenia
+	;Konkatenacja z nazwƒÖ pliku do otworzenia
 	invoke lstrcatA, OFFSET tempFileNameBufor , OFFSET tempFile
 
 ENDM
@@ -218,10 +220,9 @@ getFileInputHandlerMACRO MACRO
 	;Pobranie uchwytu do pliku
 	invoke CreateFileA, OFFSET filenamePathBufor, GENERIC_WRITE,0,0,CREATE_ALWAYS,0,0
 	MOV openedFileHandle, EAX
-
 ENDM
 ;wyrzuc niepotrzebne otwierania
-getFileInputHandlerReadMACRO MACRO
+getFileInputHandlerReadMACRO MACRO filenamePathBufor:REQ, openedFileHandle:REQ
 
 	;Pobanie uchwytu do pliku
 	invoke CreateFileA, OFFSET filenamePathBufor, GENERIC_READ OR GENERIC_WRITE,0,0,OPEN_EXISTING,0,0
@@ -231,9 +232,10 @@ ENDM
 
 printFileMACRO MACRO
 		;Wczytanie nazwy pliku
-	getFilenamePathMACRO	 
+	getFilenamePathMACRO	 directoryNameBufor, filenameBufor, filenamePathBufor,sizeFilenameBufor,sizeDirectoryNameBufor
+
 	;Otwarcie pliku
-	getFileInputHandlerReadMACRO 
+	getFileInputHandlerReadMACRO filenamePathBufor, openedFileHandle
 
 	MOV EBX, OFFSET inputBufor
 	MOV bytesToWrite, 1
@@ -265,21 +267,21 @@ ENDM
 
 getNumberRangeMACRO MACRO
 
-	;Pobranie wartoúci od
+	;Pobranie warto≈õci od
 	invoke 	WriteConsoleA, hout, OFFSET rangeMsg1,sizeRangeMsg1,OFFSET rout,0
 	invoke ReadConsoleA, hinp, OFFSET bufor, rbuf, OFFSET rinp, 0
 	push OFFSET bufor
 	call ScanInt
 	MOV rangeFrom, EAX
 
-	;Pobranie wartoúci do
+	;Pobranie warto≈õci do
 	invoke 	WriteConsoleA, hout, OFFSET rangeMsg2,sizeRangeMsg2,OFFSET rout,0
 	invoke ReadConsoleA, hinp, OFFSET bufor, rbuf, OFFSET rinp, 0
 	push OFFSET bufor
 	call ScanInt
 	MOV rangeTo, EAX
 
-	;Pobranie wartoúci ile
+	;Pobranie warto≈õci ile
 	invoke 	WriteConsoleA, hout, OFFSET rangeMsg3,sizeRangeMsg3,OFFSET rout,0
 	invoke ReadConsoleA, hinp, OFFSET bufor, rbuf, OFFSET rinp, 0
 	push OFFSET bufor
@@ -289,18 +291,18 @@ ENDM
 
 saveRandomNumbersInFile MACRO
 invoke GetTickCount ;zwraca w czas w milisekundach od ostatniego uruchomienia systemu
-	invoke nseed,EAX; ustawienie wartoúci inicujπcej generator liczb pseudolosowych
+	invoke nseed,EAX; ustawienie warto≈õci inicujƒÖcej generator liczb pseudolosowych
 	
 	MOV EAX, rangeTo
 	SUB EAX, rangeFrom
 	MOV range, EAX
 
-	INC numbersAmount ;idk dlaczego ale o 1 za ma≥o zapisuje
+	INC numbersAmount ;idk dlaczego ale o 1 za ma≈Ço zapisuje
 	MOV ECX, numbersAmount
 
 	saveNumber:
 	
-	invoke nrandom,range ;zwraca w eax liczbÍ z zakresu 0-zakres
+	invoke nrandom,range ;zwraca w eax liczbƒô z zakresu 0-zakres
 	ADD EAX, rangefrom ;Dodanie przesuniecia od zera
 	MOV randomNumber,EAX
 
@@ -323,13 +325,12 @@ invoke GetTickCount ;zwraca w czas w milisekundach od ostatniego uruchomienia sy
 ENDM
 
 main proc
-;--- pobranie uchwytÛw do wyj i wej
-	ReturnDescryptor STD_OUTPUT_HANDLE, hout ;przyk≥ad uøycia makra
-	ReturnDescryptor STD_INPUT_HANDLE, hinp ;przyk≥ad uøycia tego samego makra z innymi parametrami
-	getGetCurrentDirectoryMACRO		directoryNameBufor, sizeDirectoryNameBufor 
+;--- pobranie uchwyt√≥w do wyj i wej
+	ReturnDescryptor STD_OUTPUT_HANDLE, hout ;przyk≈Çad u≈ºycia makra
+	ReturnDescryptor STD_INPUT_HANDLE, hinp ;przyk≈Çad u≈ºycia tego samego makra z innymi parametrami
 
 
-;--------- konwersja znakÛw wiadomoúci na polskie znaki ---------
+;--------- konwersja znak√≥w wiadomo≈õci na polskie znaki ---------
 charToOemMACRO naglow 
 charToOemMACRO getFilenameMsg 
 charToOemMACRO menuMsg1
@@ -341,13 +342,13 @@ charToOemMACRO menuInvalidArgument
 charToOemMACRO rangeMsg1
 charToOemMACRO rangeMsg2
 charToOemMACRO rangeMsg3
-;------ wyúwietlenie autora ---------
+;------ wy≈õwietlenie autora ---------
     invoke 	WriteConsoleA, hout, OFFSET naglow,rozmN,OFFSET rout,0 
 
-;------ pÍtla menu ---------
+;------ pƒôtla menu ---------
 menuLoop:
 
-	;Wypisanie na konsole treúci z bufora menuMsg
+	;Wypisanie na konsole tre≈õci z bufora menuMsg
 	MOV menuOption, 0
     invoke 	WriteConsoleA, hout, OFFSET menuMsg1,sizeMsg1,OFFSET rout,0
 	invoke 	WriteConsoleA, hout, OFFSET menuMsg2,sizeMsg2,OFFSET rout,0 
@@ -377,12 +378,12 @@ menuLoop:
 
 	;Wypisanie pliku
 	;printFileMACRO
-
-
 	;todelete		;Wczytanie nazwy pliku
-	getFilenamePathMACRO	
+	getFilenamePathMACRO	 directoryNameBufor, filenameBufor, filenamePathBufor,sizeFilenameBufor,sizeDirectoryNameBufor
+
 	;Otwarcie pliku
-	getFileInputHandlerReadMACRO 
+	getFileInputHandlerReadMACRO filenamePathBufor, openedFileHandle
+
 	MOV EBX, OFFSET inputBufor
 	MOV bytesToWrite, 1
 	wczytaj:
@@ -418,10 +419,10 @@ menuLoop:
 
 	;--------------------------------------------LOSOWANIE CASE--------------------------------------------
 	losujLiczby:		
-	
 
 	;Pobranie nazwy pliku
-	getFilenamePathMACRO	
+	getFilenamePathMACRO	 directoryNameBufor, filenameBufor, filenamePathBufor,sizeFilenameBufor,sizeDirectoryNameBufor
+	
 	;Pobranie uchwytu do pliku
 	getFileInputHandlerMACRO 
 	;getFileInputHandlerMACRO filenamePathBufor, openedFileHandle
@@ -430,38 +431,11 @@ menuLoop:
 	getNumberRangeMACRO
 	
 	;Losowanie i zapis do pliku
-	;saveRandomNumbersInFile
-	;delete
-	invoke GetTickCount ;zwraca w czas w milisekundach od ostatniego uruchomienia systemu
-	invoke nseed,EAX; ustawienie wartoúci inicujπcej generator liczb pseudolosowych
-	
-	MOV EAX, rangeTo
-	SUB EAX, rangeFrom
-	MOV range, EAX
+	saveRandomNumbersInFile
 
-	INC numbersAmount ;idk dlaczego ale o 1 za ma≥o zapisuje
-	MOV ECX, numbersAmount
-
-	saveNumber:
-	
-	invoke nrandom,range ;zwraca w eax liczbÍ z zakresu 0-zakres
-	ADD EAX, rangefrom ;Dodanie przesuniecia od zera
-	MOV randomNumber,EAX
-
-	invoke dwtoa,randomNumber, OFFSET  bufor
-
-	invoke lstrlenA, OFFSET  bufor;
-	 
-	invoke WriteFile, openedFileHandle, OFFSET bufor, EAX, bytesWritten,0
-	invoke WriteFile, openedFileHandle, OFFSET separator, 1, bytesWritten,0
-
-	DEC numbersAmount
-	MOV ECX, numbersAmount
-	loop saveNumber
-	;delete
 
 	
-	invoke CloseHandle, openedFileHandle
+
 	JMP menuLoop
 
 	;--------------------------------------------SORTOWANIE CASE--------------------------------------------
@@ -474,9 +448,10 @@ menuLoop:
 	MOV tempFileHandle, EAX
 
 	;Pobranie nazwy pliku
-	getFilenamePathMACRO	
+	getFilenamePathMACRO	 directoryNameBufor, filenameBufor, filenamePathBufor,sizeFilenameBufor,sizeDirectoryNameBufor
+	
 	;Pobranie uchwytu do pliku
-	getFileInputHandlerReadMACRO 
+	getFileInputHandlerReadMACRO filenamePathBufor, openedFileHandle
 	
 
 
@@ -490,16 +465,16 @@ menuLoop:
 		
 		;invoke ReadFile, openedFileHandle, EBX , 1, OFFSET  inputCharsReaded, 0
 		invoke ReadFile, openedFileHandle, adresBufora , 1, OFFSET  inputCharsReaded, 0
-	
+		MOV EAX, scanedChars
 		INC scanedChars
 		INC distance
 
-		MOV EBX, adresBufora
+	
 		.IF BYTE PTR [EBX] == 59
-			;kasowanie úrednika z bufora
-			MOV BYTE PTR [adresBufora], 00
-			MOV adresBufora, OFFSET buforPierwszy
-			DEC adresBufora
+			;kasowanie ≈õrednika z bufora
+			MOV BYTE PTR [EBX], 00
+			MOV EBX, OFFSET buforPierwszy
+			DEC EBX
 		
 
 			;konwersja bufora na cyfre
@@ -509,7 +484,7 @@ menuLoop:
 			call ScanInt
 			MOV liczba1, EAX
 				;zerowanie bufora
-				mov ECX,8
+				mov ECX,16
 				zerowanie:
 				MOV BYTE PTR[OFFSET buforPierwszy + ECX],0
 				loop zerowanie
@@ -529,27 +504,26 @@ menuLoop:
 			mov scanedChars, 00
 		.ENDIF
 
-;		INC EBX
-		INC adresBufora
+		INC EBX
 	
-	;	JEåLI KONIEC PLIKU 
+	;	JE≈öLI KONIEC PLIKU 
 		.IF inputCharsReaded == 0
 			jmp koniecPliku
 			MOV ECX, 0
 		.ENDIF
 
-	; W PRZECIWNYM RAZIE WR”∆ DO WCZYTANIA ZNAKU
+	; W PRZECIWNYM RAZIE WR√ìƒÜ DO WCZYTANIA ZNAKU
 		
 		jmp wczytajZnak
 
 	koniecPliku:
 
-	;SPRAWDZENIE CZY LICZBA W PLIKU ZOSTA£A W OG”LE ZNALEZIONA I 
+	;SPRAWDZENIE CZY LICZBA W PLIKU ZOSTA≈ÅA W OG√ìLE ZNALEZIONA I 
 	.IF min ==  99999999
 		jmp wyjdzStont
 	.ENDIF
 
-	; W PRZECZIWNYM RAZIE USTAW WSKAèNIK NA NAJMNIEJSZA LICZBE
+	; W PRZECZIWNYM RAZIE USTAW WSKA≈πNIK NA NAJMNIEJSZA LICZBE
 	invoke SetFilePointer, openedFileHandle, distanceMin, 0, FILE_BEGIN
 
 	; WCZYTAJ TYLE ZNAKOW ILE MIALA NAJMNIEJSZA LIZCZBA
@@ -568,7 +542,7 @@ menuLoop:
 	JNE wypelnijSeparatorem
 
 
-	; WYZERUJ WSKAèNIK PLIKU I WCZYTAJ KOLEJN• LICZBE
+	; WYZERUJ WSKA≈πNIK PLIKU I WCZYTAJ KOLEJNƒÑ LICZBE
 	invoke SetFilePointer, openedFileHandle, 0, 0, FILE_BEGIN
 	JMP znajdzNajmniejsza
 
@@ -578,7 +552,7 @@ menuLoop:
 	invoke CloseHandle, openedFileHandle
 	invoke CloseHandle, tempFileHandle
 
-	; OTWORZ PLIKI BY PRZEPISA∆ Z TYMCZASOWEGO DO PLIKU G£”WNEGO POSORTOWAN• LISTE
+	; OTWORZ PLIKI BY PRZEPISAƒÜ Z TYMCZASOWEGO DO PLIKU G≈Å√ìWNEGO POSORTOWANƒÑ LISTE
 	invoke CreateFileA, OFFSET filenamePathBufor, GENERIC_WRITE,0,0,CREATE_ALWAYS,0,0
 	MOV openedFileHandle, EAX
 
@@ -597,8 +571,15 @@ menuLoop:
 	JMP przepisuj
 
 
-;--- zakoÒczenie procesu ---------
-	invoke ExitProcess, 0	; wywo≥anie funkcji ExitProcess
+	
+
+
+
+
+;--- wy≈õwietlenie wyniku ---------
+	invoke	WriteConsoleA, hout, OFFSET bufor, rinp, OFFSET rout, 0; wywo≈Çanie funkcji WriteConsoleA
+;--- zako≈Ñczenie procesu ---------
+	invoke ExitProcess, 0	; wywo≈Çanie funkcji ExitProcess
 	
 	main ENDP
 _TEXT	ENDS    
