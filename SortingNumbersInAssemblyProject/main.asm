@@ -6,7 +6,6 @@
 .MODEL flat, STDCALL
 OPTION LJMP ;Obs≥uga d≥uøszych skokÛw
 
-;--- stale ---
 STD_INPUT_HANDLE                     equ -10
 STD_OUTPUT_HANDLE                    equ -11
 GENERIC_READ                         equ 80000000h
@@ -18,7 +17,6 @@ OPEN_ALWAYS                          equ 4
 FILE_BEGIN							 equ 0h ;MoveMethod dla SetFilePointe
 FILE_CURRENT                         equ 1h ;MoveMethod dla SetFilePointe
 FILE_END                             equ 2h ;MoveMethod dla SetFilePointe
-;--- prototypy ---
 CharToOemA PROTO :DWORD,:DWORD
 GetStdHandle PROTO :DWORD
 ReadConsoleA PROTO :DWORD,:DWORD,:DWORD,:DWORD,:DWORD
@@ -40,7 +38,6 @@ nrandom PROTO :DWORD
 GetTickCount PROTO
 dwtoa PROTO :DWORD, :DWORD 
 ;------------------------------------------
-;-------------
 _DATA SEGMENT
 	adresBufora	DD	?
 	trash	DD	?
@@ -84,7 +81,6 @@ _DATA SEGMENT
 	ALIGN	4
 	sizeFilenameMsg	DD	$ - getFilenameMsg ;liczba znakÛw w tablicy
 
-	;	---		Opcje menu		---
 	menuMsg1 DB 0Dh,0Ah,"Wybierz opcje: ",0
 	ALIGN	4
 	sizeMsg1	DD	$ - menuMsg1 ;liczba znakÛw w tablicy
@@ -197,30 +193,24 @@ ENDM
 getGetCurrentDirectoryMACRO MACRO
 	invoke GetCurrentDirectoryA,  sizeDirectoryNameBufor, OFFSET directoryNameBufor
 	invoke lstrlenA, OFFSET directoryNameBufor
-	;---------  Dodanie ukoúnika na koniec (5C znak ukoúnika w hexie)
 	MOV BYTE PTR[OFFSET directoryNameBufor + EAX],5Ch
 ENDM
 
 
 getFilenamePathMACRO MACRO 
 
-	;Makro pobierajπce nazwe pliku do wczytania
 	getFilenameMACRO
 	
-	;Kopiowanie do bufora docelowego scieøki katalogu
 	invoke lstrcpyA, OFFSET filenamePathBufor, OFFSET directoryNameBufor
 	
-	;Konkatenacja z nazwπ pliku do otworzenia
 	invoke lstrcatA, OFFSET filenamePathBufor , OFFSET filenameBufor
 
 ENDM
 
 	getTempFileNameMACRO MACRO
 	
-	;Kopiowanie do bufora docelowego scieøki katalogu
 	invoke lstrcpyA, OFFSET tempFileNameBufor, OFFSET directoryNameBufor
 	
-	;Konkatenacja z nazwπ pliku do otworzenia
 	invoke lstrcatA, OFFSET tempFileNameBufor , OFFSET tempFile
 
 ENDM
@@ -256,15 +246,12 @@ ENDM
 getFileInputHandlerReadExistingMACRO MACRO
 
 	getFilenamePathMACRO
-	;Pobanie uchwytu do pliku
 	invoke CreateFileA, OFFSET filenamePathBufor, GENERIC_READ OR GENERIC_WRITE,0,0,OPEN_EXISTING,0,0	
 	MOV openedFileHandle, EAX
 ENDM
 
 printFileMACRO MACRO
-		;Wczytanie nazwy pliku
 	getFilenamePathMACRO	 
-	;Otwarcie pliku
 	getFileInputHandlerReadMACRO 
 
 	MOV EBX, OFFSET inputBufor
@@ -297,21 +284,18 @@ ENDM
 
 getNumberRangeMACRO MACRO
 
-	;Pobranie wartoúci od
 	invoke 	WriteConsoleA, hout, OFFSET rangeMsg1,sizeRangeMsg1,OFFSET rout,0
 	invoke ReadConsoleA, hinp, OFFSET bufor, rbuf, OFFSET rinp, 0
 	push OFFSET bufor
 	call ScanInt
 	MOV rangeFrom, EAX
 
-	;Pobranie wartoúci do
 	invoke 	WriteConsoleA, hout, OFFSET rangeMsg2,sizeRangeMsg2,OFFSET rout,0
 	invoke ReadConsoleA, hinp, OFFSET bufor, rbuf, OFFSET rinp, 0
 	push OFFSET bufor
 	call ScanInt
 	MOV rangeTo, EAX
 
-	;Pobranie wartoúci ile
 	invoke 	WriteConsoleA, hout, OFFSET rangeMsg3,sizeRangeMsg3,OFFSET rout,0
 	invoke ReadConsoleA, hinp, OFFSET bufor, rbuf, OFFSET rinp, 0
 	push OFFSET bufor
@@ -370,11 +354,9 @@ invoke GetTickCount ;zwraca w czas w milisekundach od ostatniego uruchomienia sy
 ENDM
 
 main proc
-;--- pobranie uchwytÛw do wyj i wej
 	ReturnDescryptor STD_OUTPUT_HANDLE, hout ;przyk≥ad uøycia makra
 	ReturnDescryptor STD_INPUT_HANDLE, hinp ;przyk≥ad uøycia tego samego makra z innymi parametrami
 
-;--- pobranie úcieøki w ktÛrej znajduje siÍ program
 	getGetCurrentDirectoryMACRO
 
 
@@ -399,7 +381,6 @@ charToOemMACRO sortedSuccessful
 ;------ pÍtla menu ---------
 menuLoop:
 
-	;Wypisanie na konsole treúci z bufora menuMsg
 	MOV menuOption, 0
     invoke 	WriteConsoleA, hout, OFFSET menuMsg1,sizeMsg1,OFFSET rout,0
 	invoke 	WriteConsoleA, hout, OFFSET menuMsg2,sizeMsg2,OFFSET rout,0 
@@ -407,7 +388,6 @@ menuLoop:
     invoke 	WriteConsoleA, hout, OFFSET menuMsg4,sizeMsg4,OFFSET rout,0 
     invoke 	WriteConsoleA, hout, OFFSET menuMsg5,sizeMsg5,OFFSET rout,0 
 	
-	;Pobranie argumentu od uzytkownika
 	invoke ReadConsoleA, hinp, OFFSET menuOption, sizeMenuOption, OFFSET rinp, 0
 	SUB menuOption, 30h
 	.IF menuOption == 1
@@ -419,7 +399,6 @@ menuLoop:
 	.ELSEIF menuOption == 4
 		invoke ExitProcess, 0
 	.ELSE
-		;Powiadomienie o nierozpoznaniu argumentu
 	    invoke 	WriteConsoleA, hout, OFFSET menuInvalidArgument,sizeMenuInvalidArgument,OFFSET rout,0 
 		JMP menuLoop
 	.ENDIF
@@ -427,7 +406,6 @@ menuLoop:
 	;--------------------------------------------WYPISYWANIE CASE--------------------------------------------
 	wypiszPlik:
 
-	;Otwarcie pliku
 	errorOpenFileLoop:
 		getFileInputHandlerReadExistingMACRO 
 		.IF openedFileHandle == 0FFFFFFFFh
@@ -470,16 +448,13 @@ menuLoop:
 
 	getFileInputHandlerWriteCreateMACRO
 
-	;Pobranie zakresu do losowania
 	errorBadRange:
-	;Dzia≥a tylko gÛrny zakres poniewaø ScanInt tylko zwraca dodatnie
 	getNumberRangeMACRO
 		.IF rangeTo == 0 || rangeFrom == 0 || numbersAmount == 0 
 			invoke 	WriteConsoleA, hout, OFFSET badRangeError, sizeBadRangeError,OFFSET rout,0
 			JMP errorBadRange
 		.ENDIF
 
-	;Losowanie i zapis do pliku
 	saveRandomNumbersInFile
 	
 	invoke CloseHandle, openedFileHandle
@@ -489,7 +464,6 @@ menuLoop:
 	sortujLiczby:
 
 	
-	;Pobanie uchwytu do pliku tymczasowego
 	getTempFileInputHandlerWriteCreateMACRO
 
 		errorOpenFileLoop2:
@@ -511,18 +485,14 @@ menuLoop:
 			INC distance
 			MOV EBX, adresBufora
 			.IF BYTE PTR [EBX] == 59
-				;kasowanie úrednika z bufora
 				MOV BYTE PTR [adresBufora], 00
 				MOV adresBufora, OFFSET buforPierwszy
 				DEC adresBufora
 
-				;konwersja bufora na cyfre
 				push OFFSET buforPierwszy
-				;.IF scanedChars > 2
 				.IF scanedChars > 1
 				call ScanInt
 				MOV liczba1, EAX
-					;zerowanie bufora
 					mov ECX,8
 					zerowanie:
 					MOV BYTE PTR[OFFSET buforPierwszy + ECX],0
@@ -545,32 +515,25 @@ menuLoop:
 
 			INC adresBufora
 	
-		;	JEåLI KONIEC PLIKU 
 			.IF inputCharsReaded == 0
 				jmp koniecPliku
 				MOV ECX, 0
 			.ENDIF
 
-		; W PRZECIWNYM RAZIE WR”∆ DO WCZYTANIA ZNAKU
 			jmp wczytajZnak
 
 	koniecPliku:
-		;SPRAWDZENIE CZY LICZBA W PLIKU ZOSTA£A W OG”LE ZNALEZIONA I 
 		.IF min ==  00FFFFFFFh
 			jmp sortingEndLoop
 		.ENDIF
 
-		; W PRZECZIWNYM RAZIE USTAW WSKAèNIK NA NAJMNIEJSZA LICZBE
 		invoke SetFilePointer, openedFileHandle, distanceMin, 0, FILE_BEGIN
 
-		; WCZYTAJ TYLE ZNAKOW ILE MIALA NAJMNIEJSZA LIZCZBA
 		invoke ReadFile, openedFileHandle, OFFSET buforPierwszy , scanedCharsMin , OFFSET  inputCharsReaded, 0
 
 	
-		; ZAPISZ TYLE ZNAKOW DO PLIKU TYMCZASOWEGO ILE MIALA NAJMNIEJSZA LIZCZBA
 		invoke WriteFile, tempFileHandle, OFFSET buforPierwszy, scanedCharsMin , OFFSET bytesWritten,0
 
-		; NADPISZ MIEJSCE NAJMNIEJSZEJ LICZBY SEPRARATORAMI
 		invoke SetFilePointer, openedFileHandle, distanceMin, 0, FILE_BEGIN
 		wypelnijSeparatorem:
 		invoke WriteFile, openedFileHandle, offset separator, 1,OFFSET bytesWritten,0
@@ -579,17 +542,14 @@ menuLoop:
 		JNE wypelnijSeparatorem
 
 
-		; WYZERUJ WSKAèNIK PLIKU I WCZYTAJ KOLEJN• LICZBE
 		invoke SetFilePointer, openedFileHandle, 0, 0, FILE_BEGIN
 		JMP znajdzNajmniejsza
 
-		;ZAMKNIJ PLIKI BY ZAPISAC
 		sortingEndLoop:
 		invoke CloseHandle, openedFileHandle
 		invoke CloseHandle, tempFileHandle
 
-		; OTWORZ PLIKI BY PRZEPISA∆ Z TYMCZASOWEGO DO PLIKU G£”WNEGO POSORTOWAN• LISTE
-		overwriteFilenammeMACRO
+		overwriteFilenammeMACRO		
 		getTempFileInputHandlerReadExistingMACRO
 
 		WriteToMainFile:
